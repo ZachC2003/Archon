@@ -83,11 +83,9 @@ class AgentState(TypedDict):
 
 # Scope Definition Node with Reasoner LLM
 async def define_scope_with_reasoner(state: AgentState):
-    # First, get the documentation pages so the reasoner can decide which ones are necessary
     documentation_pages = await list_documentation_pages_helper(supabase)
     documentation_pages_str = "\n".join(documentation_pages)
 
-    # Then, use the reasoner to define the scope
     prompt = f"""
     User AI Agent Request: {state['latest_user_message']}
     
@@ -107,7 +105,6 @@ async def define_scope_with_reasoner(state: AgentState):
     result = await reasoner.run(prompt)
     scope = result.data
 
-    # Get the directory one level up from the current file
     current_dir = os.path.dirname(os.path.abspath(__file__))
     parent_dir = os.path.dirname(current_dir)
     scope_path = os.path.join(parent_dir, "workbench", "scope.md")
@@ -120,45 +117,35 @@ async def define_scope_with_reasoner(state: AgentState):
 
 # Coding Node with Feedback Handling
 async def coder_agent(state: AgentState, writer):    
-    # Prepare dependencies
     deps = PydanticAIDeps(
         supabase=supabase,
         openai_client=openai_client,
         reasoner_output=state['scope']
     )
 
-    # Get the message history into the format for Pydantic AI
     message_history: list[ModelMessage] = []
     for message_row in state['messages']:
         message_history.extend(ModelMessagesTypeAdapter.validate_json(message_row))
 
-    # Run the agent in a stream
     if not is_openai:
         writer = get_stream_writer()
-        result = await pydantic_ai_coder.run(state['latest_user_message'], deps=deps, message_history= message_history)
+        result = await pydantic_ai_coder.run(state['latest_user_message'], deps=deps, message_history=message_history)
         writer(result.data)
     else:
         async with pydantic_ai_coder.run_stream(
             state['latest_user_message'],
             deps=deps,
-            message_history= message_history
+            message_history=message_history
         ) as result:
-            # Stream partial text as it arrives
             async for chunk in result.stream_text(delta=True):
                 writer(chunk)
-
-    # print(ModelMessagesTypeAdapter.validate_json(result.new_messages_json()))
 
     return {"messages": [result.new_messages_json()]}
 
 # Interrupt the graph to get the user's next message
 def get_next_user_message(state: AgentState):
     value = interrupt({})
-
-    # Set the user's latest message for the LLM to continue the conversation
-    return {
-        "latest_user_message": value
-    }
+    return {"latest_user_message": value}
 
 # Determine if the user is finished creating their AI agent or not
 async def route_user_message(state: AgentState):
@@ -181,22 +168,19 @@ async def route_user_message(state: AgentState):
 
 # End of conversation agent to give instructions for executing the agent
 async def finish_conversation(state: AgentState, writer):    
-    # Get the message history into the format for Pydantic AI
     message_history: list[ModelMessage] = []
     for message_row in state['messages']:
         message_history.extend(ModelMessagesTypeAdapter.validate_json(message_row))
 
-    # Run the agent in a stream
     if not is_openai:
         writer = get_stream_writer()
-        result = await end_conversation_agent.run(state['latest_user_message'], message_history= message_history)
+        result = await end_conversation_agent.run(state['latest_user_message'], message_history=message_history)
         writer(result.data)   
     else: 
         async with end_conversation_agent.run_stream(
             state['latest_user_message'],
-            message_history= message_history
+            message_history=message_history
         ) as result:
-            # Stream partial text as it arrives
             async for chunk in result.stream_text(delta=True):
                 writer(chunk)
 
@@ -205,13 +189,11 @@ async def finish_conversation(state: AgentState, writer):
 # Build workflow
 builder = StateGraph(AgentState)
 
-# Add nodes
 builder.add_node("define_scope_with_reasoner", define_scope_with_reasoner)
 builder.add_node("coder_agent", coder_agent)
 builder.add_node("get_next_user_message", get_next_user_message)
 builder.add_node("finish_conversation", finish_conversation)
 
-# Set edges
 builder.add_edge(START, "define_scope_with_reasoner")
 builder.add_edge("define_scope_with_reasoner", "coder_agent")
 builder.add_edge("coder_agent", "get_next_user_message")
@@ -222,6 +204,5 @@ builder.add_conditional_edges(
 )
 builder.add_edge("finish_conversation", END)
 
-# Configure persistence
 memory = MemorySaver()
 agentic_flow = builder.compile(checkpointer=memory)

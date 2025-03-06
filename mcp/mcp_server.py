@@ -9,6 +9,9 @@ import uuid
 import sys
 import os
 
+# Add the directory containing the mcp module to the sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "venv", "Lib", "site-packages")))
+
 # Load environment variables from .env file
 load_dotenv()
 

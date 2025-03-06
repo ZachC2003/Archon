@@ -101,6 +101,7 @@ pandas==2.2.3
 pillow==10.4.0
 playwright==1.49.1
 pluggy==1.5.0
+plotly>=5.18.0
 postgrest==0.19.1
 propcache==0.2.1
 protobuf==5.29.3
@@ -147,7 +148,7 @@ soupsieve==2.6
 sse-starlette==2.1.3
 starlette==0.45.3
 storage3==0.11.0
-streamlit==1.41.1
+streamlit>=1.31.0
 StrEnum==0.4.15
 structlog==24.4.0
 supabase==2.11.0
@@ -175,3 +176,4 @@ xxhash==3.5.0
 yarl==1.18.3
 zipp==3.21.0
 zstandard==0.23.0
+git+https://github.com/codeium-ai/mcp-langchain.git
