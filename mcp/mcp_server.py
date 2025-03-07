@@ -15,8 +15,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "v
 # Load environment variables from .env file
 load_dotenv()
 
-# Initialize FastMCP server
-mcp = FastMCP("archon")
+# Initialize FastMCP server with ERROR logging level
+mcp = FastMCP("archon", log_level="ERROR")
 
 # Store active threads
 active_threads: Dict[str, List[str]] = {}
@@ -113,3 +113,5 @@ if __name__ == "__main__":
     
     # Run MCP server
     mcp.run(transport='stdio')
+    mcp.run(transport='stdio')
+
